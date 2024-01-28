@@ -11,33 +11,33 @@ from bs4 import BeautifulSoup
 
 
 def author(url_author):
-    url = url_author
-
-    request = requests.get(url)
-    soup = BeautifulSoup(request.text, 'html.parser')
-
     list_titles = []
+
     count = 0
-    num_titles = -1
+    has_titles = True
 
-    while num_titles != 0:
-        for row in soup.select('a[class="title_link"]'):
-            row = row.get('href')
-            row = row.replace('manga/', 'download/')
-            if 'https://manga-chan.me' in url_author:
-                row = 'https://manga-chan.me' + row
-            elif 'https://hentaichan.live' in url_author:
-                row = 'https://hentaichan.live' + row
-            list_titles.append(row)
-
-        count += 20
-        url = url_author + '?offset=' + str(count)
+    while has_titles:
+        url = f"{url_author}?offset={count}"
         request = requests.get(url)
         soup = BeautifulSoup(request.text, 'html.parser')
-        num_titles = len(soup.find_all('a', class_='title_link'))
 
-    for i in list_titles:
-        manga(i)
+        titles = soup.select('a[class="title_link"]')
+        if not titles:
+            break
+
+        for title in titles:
+            href = title.get('href')
+            full_url = f"https://manga-chan.me{href}" if 'manga-chan.me' in url_author \
+                else f"https://hentaichan.live{href}"
+            list_titles.append(full_url)
+
+        count += 20
+
+    print(f'Найдено {len(list_titles)} манг')
+
+    # Обработка каждой ссылки манги
+    for title_url in list_titles:
+        manga(title_url)
 
 
 def manga(url_manga):
@@ -56,7 +56,8 @@ def manga(url_manga):
     tag_names = [tag.get_text() for tag in tag_elements]
 
     # Вывод информации
-    manga_info = f'Название: {manga_title}\nАвтор: {author_name}\nID автора: {author_id}\nТэги: {tag_names}\nСсылка: {url_manga}'
+    manga_info = (f'Название: {manga_title}\nАвтор: {author_name}\n'
+                  f'ID автора: {author_id}\nТэги: {tag_names}\nСсылка: {url_manga}')
 
     print(manga_info)
 
