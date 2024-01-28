@@ -1,13 +1,38 @@
-"""
-mangachan downloader
-"""
-
-import os
 import re
+import os
 from pathlib import Path
+import logging
+import sys
 
 import requests
 from bs4 import BeautifulSoup
+
+# Настройка логгера
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+
+HEADERS = {
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,"
+              "application/signed-exchange;v=b3;q=0.9",
+    "Referer": "https://manga-chan.me/",
+    "User-Agent": "Mozilla/5.0 (X11; CrOS x86_64 12871.102.0) AppleWebKit/537.36 (KHTML, like Gecko) "
+                  "Chrome/81.0.4044.141 Safari/537.36"
+}
+
+
+def make_request(url):
+    """
+    Выполняет HTTP-запрос и возвращает объект BeautifulSoup.
+    """
+    try:
+        with requests.Session() as session:
+            session.headers.update(HEADERS)
+            response = session.get(url)
+            response.raise_for_status()
+            return BeautifulSoup(response.text, 'html.parser')
+    except requests.RequestException as e:
+        logging.error(f"Ошибка при запросе к {url}: {e}")
+        return None
 
 
 def author(url_author):
@@ -18,8 +43,7 @@ def author(url_author):
 
     while has_titles:
         url = f"{url_author}?offset={count}"
-        request = requests.get(url)
-        soup = BeautifulSoup(request.text, 'html.parser')
+        soup = make_request(url)
 
         titles = soup.select('a[class="title_link"]')
         if not titles:
@@ -33,7 +57,7 @@ def author(url_author):
 
         count += 20
 
-    print(f'Найдено {len(list_titles)} манг')
+    logging.info(f'Найдено {len(list_titles)} манг')
 
     # Обработка каждой ссылки манги
     for title_url in list_titles:
@@ -41,8 +65,7 @@ def author(url_author):
 
 
 def manga(url_manga):
-    request = requests.get(url_manga)
-    soup = BeautifulSoup(request.text, 'html.parser')
+    soup = make_request(url_manga)
 
     # Извлечение названия манги и автора
     manga_title_tag = soup.find('a', class_='title_top_a')
@@ -59,7 +82,7 @@ def manga(url_manga):
     manga_info = (f'Название: {manga_title}\nАвтор: {author_name}\n'
                   f'ID автора: {author_id}\nТэги: {tag_names}\nСсылка: {url_manga}')
 
-    print(manga_info)
+    logging.info(f'{manga_title}')
 
     # Создание пути для сохранения файла
     save_path = Path(author_name) / manga_title
@@ -78,9 +101,9 @@ def manga(url_manga):
             with open(save_path / 'cover.jpg', 'wb') as file:
                 file.write(response.content)
         else:
-            print("Ошибка при загрузке обложки")
+            logging.error(f"Ошибка при загрузке обложки")
     else:
-        print("Обложка не найдена")
+        logging.error(f"Обложка не найдена")
 
     # Сохранение информации в текстовый файл
     with open(save_path / 'info.txt', 'w', encoding='utf-8') as file:
@@ -92,15 +115,7 @@ def manga(url_manga):
 
 
 def download(url_download, directory):
-    headers = {
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,"
-                  "application/signed-exchange;v=b3;q=0.9",
-        "Referer": "https://manga-chan.me/",
-        "User-Agent": "Mozilla/5.0 (X11; CrOS x86_64 12871.102.0) AppleWebKit/537.36 (KHTML, like Gecko) "
-                      "Chrome/81.0.4044.141 Safari/537.36"
-    }
-    request = requests.get(url_download)
-    soup = BeautifulSoup(request.text, 'html.parser')
+    soup = make_request(url_download)
 
     # Находим все ссылки для скачивания
     download_links = soup.select('#download_table a[href]')
@@ -110,23 +125,27 @@ def download(url_download, directory):
         filename = link.get_text()
 
         # Скачивание файла
-        response = requests.get(download_url, headers=headers)
+        response = requests.get(download_url, headers=HEADERS)
         if response.status_code == 200:
             with open(directory / filename, 'wb') as file:
                 file.write(response.content)
-            print(f'Файл {filename} успешно скачан')
+
+            logging.info(f'Файл {filename} успешно скачан')
         else:
-            print(f'Ошибка при скачивании файла: {filename}')
+            logging.error(f'Ошибка при скачивании файла: {filename}')
 
 
 def main():
     """
-    В зависимости от того, какая ссылка подается в консоль, вызывается соответствующая функция
-    :return:
+    В зависимости от того, какая ссылка подается, вызывается соответствующая функция.
     """
-    print('Enter link to author or manga')
-    url = input()
-    print("\n")
+    if len(sys.argv) > 1:
+        url = sys.argv[1]
+    else:
+        print('Enter link to author or manga')
+        url = input()
+        print("\n")
+
     if 'hentaichan.live' in url:
         url = re.sub(r"(https://)(.*?)(hentaichan\.live)", r"\1\3", url)
     if '/mangaka/' in url:
@@ -134,7 +153,7 @@ def main():
     elif '/manga/' in url:
         manga(url)
     else:
-        print('Incorrect link')
+        logging.error('Incorrect link')
 
 
 if __name__ == '__main__':
