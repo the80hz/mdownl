@@ -11,7 +11,33 @@ from bs4 import BeautifulSoup
 
 
 def author(url_author):
-    pass
+    url = url_author
+
+    request = requests.get(url)
+    soup = BeautifulSoup(request.text, 'html.parser')
+
+    list_titles = []
+    count = 0
+    num_titles = -1
+
+    while num_titles != 0:
+        for row in soup.select('a[class="title_link"]'):
+            row = row.get('href')
+            row = row.replace('manga/', 'download/')
+            if 'https://manga-chan.me' in url_author:
+                row = 'https://manga-chan.me' + row
+            elif 'https://hentaichan.live' in url_author:
+                row = 'https://hentaichan.live' + row
+            list_titles.append(row)
+
+        count += 20
+        url = url_author + '?offset=' + str(count)
+        request = requests.get(url)
+        soup = BeautifulSoup(request.text, 'html.parser')
+        num_titles = len(soup.find_all('a', class_='title_link'))
+
+    for i in list_titles:
+        manga(i)
 
 
 def manga(url_manga):
