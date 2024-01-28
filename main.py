@@ -1,11 +1,10 @@
+import requests
+from bs4 import BeautifulSoup
 import re
 import os
 from pathlib import Path
 import logging
 import sys
-
-import requests
-from bs4 import BeautifulSoup
 
 # Настройка логгера
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -18,6 +17,15 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0 (X11; CrOS x86_64 12871.102.0) AppleWebKit/537.36 (KHTML, like Gecko) "
                   "Chrome/81.0.4044.141 Safari/537.36"
 }
+
+
+def clean_filename(filename):
+    """
+    Очищает имя файла от запрещенных символов.
+    """
+    # Список запрещенных символов в именах файлов для большинства ОС
+    forbidden_chars = r'[\\/*?:"<>|]'
+    return re.sub(forbidden_chars, '', filename)
 
 
 def make_request(url):
@@ -85,6 +93,8 @@ def manga(url_manga):
     logging.info(f'{manga_title}')
 
     # Создание пути для сохранения файла
+    manga_title = clean_filename(manga_title)
+    author_name = clean_filename(author_name)
     save_path = Path(author_name) / manga_title
 
     # Сохранение обложки
