@@ -1,12 +1,14 @@
 import requests
 from bs4 import BeautifulSoup
+
 import re
 import os
 from pathlib import Path
 import logging
 import sys
 
-# Настройка логгера
+from DB import init_db, save_manga_info, is_manga_downloaded
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
@@ -73,6 +75,10 @@ def author(url_author):
 
 
 def manga(url_manga):
+    if is_manga_downloaded(url_manga):
+        logging.info(f"Манга уже скачана: {url_manga}")
+        return
+
     soup = make_request(url_manga)
 
     # Извлечение названия манги и автора
@@ -99,12 +105,11 @@ def manga(url_manga):
 
     # Сохранение обложки
     cover_img_tag = soup.find('img', id='cover')
-    if cover_img_tag and cover_img_tag.has_attr('src'):
-        cover_img_url = cover_img_tag['src']
-
+    if cover_img_tag and cover_img_tag.has_attr('src') and cover_img_tag['src'] != '':
         # Создание пути для сохранения файла
         os.makedirs(save_path, exist_ok=True)
 
+        cover_img_url = cover_img_tag['src']
         # Скачивание и сохранение изображения
         response = requests.get(cover_img_url)
         if response.status_code == 200:
@@ -113,7 +118,7 @@ def manga(url_manga):
         else:
             logging.error(f"Ошибка при загрузке обложки")
     else:
-        logging.error(f"Обложка не найдена")
+        logging.warning(f"Обложка не найдена")
 
     # Сохранение информации в текстовый файл
     with open(save_path / 'info.txt', 'w', encoding='utf-8') as file:
@@ -122,6 +127,8 @@ def manga(url_manga):
     # Смена URL для скачивания
     url_download = re.sub(r"(https://)(.*?)(/manga/)", r"\1\2/download/", url_manga)
     download(url_download, directory=save_path)
+
+    save_manga_info(author_name, author_id, manga_title, url_manga, tag_names)
 
 
 def download(url_download, directory):
@@ -155,6 +162,8 @@ def main():
         print('Enter link to author or manga')
         url = input()
         print("\n")
+
+    init_db()
 
     if 'hentaichan.live' in url:
         url = re.sub(r"(https://)(.*?)(hentaichan\.live)", r"\1\3", url)
