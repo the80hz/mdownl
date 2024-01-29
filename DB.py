@@ -4,6 +4,8 @@ import sqlite3
 def init_db():
     conn = sqlite3.connect('manga.db')
     cursor = conn.cursor()
+
+    # Таблица для манги
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS manga (
             id INTEGER PRIMARY KEY,
@@ -14,6 +16,17 @@ def init_db():
             tags TEXT
         )
     ''')
+
+    # Таблица для файлов
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS downloaded_files (
+            id INTEGER PRIMARY KEY,
+            manga_id INTEGER,
+            file_url TEXT,
+            FOREIGN KEY (manga_id) REFERENCES manga (id)
+        )
+    ''')
+
     conn.commit()
     conn.close()
 
@@ -29,11 +42,30 @@ def save_manga_info(author_name, author_id, manga_title, manga_url, tags):
     conn.close()
 
 
+def save_file_info(manga_id, file_url):
+    conn = sqlite3.connect('manga.db')
+    cursor = conn.cursor()
+    cursor.execute('INSERT INTO downloaded_files (manga_id, file_url) VALUES (?, ?)', (manga_id, file_url))
+    conn.commit()
+    conn.close()
+
+
 def is_manga_downloaded(url_manga):
     conn = sqlite3.connect('manga.db')
     cursor = conn.cursor()
 
     cursor.execute('SELECT EXISTS(SELECT 1 FROM manga WHERE manga_url=? LIMIT 1)', (url_manga,))
+    exists = cursor.fetchone()[0]
+
+    conn.close()
+    return exists == 1
+
+
+def is_file_downloaded(file_url):
+    conn = sqlite3.connect('manga.db')
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT EXISTS(SELECT 1 FROM downloaded_files WHERE file_url=? LIMIT 1)', (file_url,))
     exists = cursor.fetchone()[0]
 
     conn.close()

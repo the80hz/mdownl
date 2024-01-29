@@ -7,7 +7,7 @@ from pathlib import Path
 import logging
 import sys
 
-from DB import init_db, save_manga_info, is_manga_downloaded
+from DB import init_db, save_manga_info, save_file_info, is_manga_downloaded, is_file_downloaded
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -126,12 +126,20 @@ def manga(url_manga):
 
     # Смена URL для скачивания
     url_download = re.sub(r"(https://)(.*?)(/manga/)", r"\1\2/download/", url_manga)
-    download(url_download, directory=save_path)
+    try:
+        download(url_download, directory=save_path)
+        save_manga_info(author_name, author_id, manga_title, url_manga, tag_names)
+    except Exception as e:
+        logging.error(f"Ошибка при скачивании манги: {e}")
+        return
 
     save_manga_info(author_name, author_id, manga_title, url_manga, tag_names)
 
 
 def download(url_download, directory):
+    """
+    Скачивает файлы по указанным URL и сохраняет их в указанной директории.
+    """
     soup = make_request(url_download)
 
     # Находим все ссылки для скачивания
@@ -141,13 +149,25 @@ def download(url_download, directory):
         download_url = link['href']
         filename = link.get_text()
 
+        # Извлечение manga_id из URL
+        manga_id_match = re.search(r'id=(\d+)', download_url)
+        if not manga_id_match:
+            logging.error(f"Не удалось извлечь manga_id из URL: {download_url}")
+            continue
+        manga_id = int(manga_id_match.group(1))
+
+        if is_file_downloaded(download_url):
+            logging.info(f"Файл уже скачан: {download_url}")
+            continue
+
         # Скачивание файла
         response = requests.get(download_url, headers=HEADERS)
         if response.status_code == 200:
-            with open(directory / filename, 'wb') as file:
+            file_path = directory / filename
+            with open(file_path, 'wb') as file:
                 file.write(response.content)
-
             logging.info(f'Файл {filename} успешно скачан')
+            save_file_info(manga_id, download_url)
         else:
             logging.error(f'Ошибка при скачивании файла: {filename}')
 
