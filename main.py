@@ -44,11 +44,22 @@ def make_request(url):
         return None
 
 
+def extract_domain(url):
+    pattern = re.compile(r'https?://[^/]+')
+    match = pattern.search(url)
+    if match:
+        return match.group()
+    else:
+        return url
+
+
 def author(url_author):
     list_titles = []
 
     count = 0
     has_titles = True
+
+    site = extract_domain(url_author)
 
     # Парсинг страницы автора
     logging.info(f'Парсинг страницы автора: {url_author}')
@@ -63,8 +74,8 @@ def author(url_author):
 
             for title in titles:
                 href = title.get('href')
-                full_url = f"https://manga-chan.me{href}" if 'manga-chan.me' in url_author \
-                    else f"https://hentaichan.live{href}"
+                full_url = f"{site}]{href}" if 'manga-chan.me' in url_author \
+                    else f"{site}{href}"
                 list_titles.append(full_url)
 
             count += 20
@@ -235,6 +246,14 @@ def download(url_download, directory):
     logging.info(f'Скачивание файлов завершено успешно')
 
 
+def remove_prefix_from_url(url):
+    parts = url.split('.')
+    if len(parts) >= 2:
+        return '.'.join(parts[-2:])
+    else:
+        return url
+
+
 def main():
     """
     В зависимости от того, какая ссылка подается, вызывается соответствующая функция.
@@ -247,8 +266,8 @@ def main():
 
     init_db()
 
-    if 'hentaichan.live' in url:
-        url = re.sub(r"(https://)(.*?)(hentaichan\.live)", r"\1\3", url)
+    url = remove_prefix_from_url(url)
+    print(url)
     if '/mangaka/' in url:
         author(url)
     elif '/manga/' in url:
