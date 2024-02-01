@@ -3,7 +3,6 @@ from bs4 import BeautifulSoup
 
 import re
 import os
-from pathlib import Path
 import logging
 import sys
 
@@ -85,7 +84,7 @@ def author(url_author):
             manga(title_url)
     except Exception as e:
         logging.error(f"Ошибка при парсинге манги: {e}")
-    logging.info(f'Парсинг всех манг этого автора завершен успешно')
+    logging.info(f'Парсинг всех манг этого автора завершен')
 
 
 def manga(url_manga):
@@ -93,11 +92,9 @@ def manga(url_manga):
 
     # Проверка на наличие манги в базе данных
     if is_manga_downloaded(url_manga):
-        logging.info(f"Манга уже скачана: {url_manga}")
+        logging.info(f"Манга уже скачана")
         return
 
-    # Парсинг страницы манги
-    logging.info(f'Парсинг страницы манги: {url_manga}')
     try:
         soup = make_request(url_manga)
     except Exception as e:
@@ -111,6 +108,8 @@ def manga(url_manga):
     else:
         logging.error(f"Не удалось извлечь название манги")
         return
+    logging.info(f'Название манги: {manga_title}')
+
     author_tag = soup.find('a', href=re.compile(r"/mangaka/\d+/"))
     if author_tag:
         author_name = author_tag.get_text(strip=True)
@@ -123,34 +122,31 @@ def manga(url_manga):
     tag_elements = soup.select('li.sidetag > a:last-child')
     tag_names = [tag.get_text() for tag in tag_elements] if tag_elements else []
 
-    # Вывод информации
     manga_info = (f'Название: {manga_title}\nАвтор: {author_name}\n'
                   f'ID автора: {author_id}\nТэги: {tag_names}\nСсылка: {url_manga}')
-
-    logging.info(f'Название манги: {manga_title}')
 
     # Создание пути для сохранения файла
     manga_title = clean_filename(manga_title)
     author_name = clean_filename(author_name)
-    save_path = Path(author_name) / manga_title
+    save_path = os.path.join(author_name, manga_title)
+
+    # Создание пути для сохранения файла
+    try:
+        os.makedirs(save_path, exist_ok=True)
+    except OSError as e:
+        logging.error(f"Ошибка при создании директории с мангой: {e}")
+        return
 
     # Сохранение обложки
-    logging.info(f'Сохранение обложки')
+    logging.info(f'Поиск обложки')
     cover_img_tag = soup.find('img', id='cover')
     if cover_img_tag and cover_img_tag.has_attr('src') and cover_img_tag['src'] != '':
-        # Создание пути для сохранения файла
-        try:
-            os.makedirs(save_path, exist_ok=True)
-        except OSError as e:
-            logging.error(f"Ошибка при создании директории с мангой: {e}")
-            return
-
         cover_img_url = cover_img_tag['src']
         # Скачивание и сохранение изображения
         try:
             response = requests.get(cover_img_url)
             if response.status_code == 200:
-                with open(save_path / 'cover.jpg', 'wb') as file:
+                with open(os.path.join(save_path, 'cover.jpg'), 'wb') as file:
                     file.write(response.content)
                 logging.info(f'Обложка успешно скачана')
             else:
@@ -163,7 +159,7 @@ def manga(url_manga):
     # Сохранение информации в текстовый файл
     logging.info(f'Сохранение информации о манге')
     try:
-        with open(save_path / 'info.txt', 'w', encoding='utf-8') as file:
+        with open(os.path.join(save_path, 'info.txt'), 'w', encoding='utf-8') as file:
             file.write(manga_info)
         logging.info(f'Информация о манге успешно сохранена')
     except Exception as e:
@@ -174,14 +170,15 @@ def manga(url_manga):
     url_download = re.sub(r"(https://)(.*?)(/manga/)", r"\1\2/download/", url_manga)
     try:
         download(url_download, directory=save_path)
+
+        # Сохранение информации о манге в базу данных
+        logging.info(f'Сохранение информации о манге в базу данных')
+        save_manga_info(author_name, author_id, manga_title, url_manga, tag_names)
+        logging.info(f'Информация о манге успешно сохранена в базу данных')
     except Exception as e:
         logging.error(f"Ошибка при скачивании манги: {e}")
         return
-
-    # Сохранение информации о манге в базу данных
-    logging.info(f'Сохранение информации о манге в базу данных')
-    save_manga_info(author_name, author_id, manga_title, url_manga, tag_names)
-    logging.info(f'Информация о манге успешно сохранена в базу данных')
+    logging.info(f'Скачивание манги завершено успешно')
 
 
 def download(url_download, directory):
@@ -224,7 +221,7 @@ def download(url_download, directory):
             logging.error(f"Ошибка при скачивании файла: {e}")
             continue
         if response.status_code == 200:
-            file_path = directory / filename
+            file_path = os.path.join(directory, filename)
             try:
                 with open(file_path, 'wb') as file:
                     file.write(response.content)
@@ -247,7 +244,6 @@ def main():
     else:
         print('Enter link to author or manga')
         url = input()
-        print("\n")
 
     init_db()
 
