@@ -1,5 +1,4 @@
 import requests
-from bs4 import BeautifulSoup
 
 import re
 import os
@@ -7,50 +6,20 @@ import logging
 import sys
 
 from DB import init_db, save_manga_info, save_file_info, is_manga_downloaded, is_file_downloaded
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
-
-HEADERS = {
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,"
-              "application/signed-exchange;v=b3;q=0.9",
-    "Referer": "https://manga-chan.me/",
-    "User-Agent": "Mozilla/5.0 (X11; CrOS x86_64 12871.102.0) AppleWebKit/537.36 (KHTML, like Gecko) "
-                  "Chrome/81.0.4044.141 Safari/537.36"
-}
+from utils import make_request, clean_filename, extract_domain, rm_prefix, HEADERS, setup_logging
 
 
-def clean_filename(filename):
-    """
-    Очищает имя файла от запрещенных символов.
-    """
-    # Список запрещенных символов в именах файлов для большинства ОС
-    forbidden_chars = r'[\\/*?:"<>|]'
-    return re.sub(forbidden_chars, '', filename)
-
-
-def make_request(url):
-    """
-    Выполняет HTTP-запрос и возвращает объект BeautifulSoup.
-    """
+def readfile(path):
     try:
-        with requests.Session() as session:
-            session.headers.update(HEADERS)
-            response = session.get(url)
-            response.raise_for_status()
-            return BeautifulSoup(response.text, 'html.parser')
-    except requests.RequestException as e:
-        logging.error(f"Ошибка при запросе к {url}: {e}")
-        return None
-
-
-def extract_domain(url):
-    pattern = re.compile(r'https?://[^/]+')
-    match = pattern.search(url)
-    if match:
-        return match.group()
-    else:
-        return url
+        with open(path, 'r', encoding='utf-8') as file:
+            for line in file:
+                line = line.strip()
+                if line and 'mangaka' in line:
+                    author(line)
+                elif line and 'manga' in line:
+                    manga(line)
+    except Exception as e:
+        logging.error(f"Ошибка при чтении файла: {e}")
 
 
 def author(url_author):
@@ -188,6 +157,12 @@ def manga(url_manga):
         logging.info(f'Информация о манге успешно сохранена в базу данных')
     except Exception as e:
         logging.error(f"Ошибка при скачивании манги: {e}")
+        # add link to file 'error.txt'
+        try:
+            with open('error.txt', 'a', encoding='utf-8') as file:
+                file.write(url_manga + '\n')
+        except Exception as e:
+            logging.error(f"Ошибка при записи ошибки в файл: {e}")
         return
     logging.info(f'Скачивание манги завершено успешно')
 
@@ -243,15 +218,9 @@ def download(url_download, directory):
             save_file_info(manga_id, download_url)
         else:
             logging.error(f'Ошибка при скачивании файла: {filename}')
+            raise Exception(f'Ошибка при скачивании файла: {filename}')
+
     logging.info(f'Скачивание файлов завершено успешно')
-
-
-def remove_prefix_from_url(url):
-    parts = url.split('.')
-    if len(parts) >= 2:
-        return '.'.join(parts[-2:])
-    else:
-        return url
 
 
 def main():
@@ -263,18 +232,24 @@ def main():
     else:
         print('Enter link to author or manga')
         url = input()
+    url = rm_prefix(url)
 
     init_db()
 
-    url = remove_prefix_from_url(url)
-    print(url)
     if '/mangaka/' in url:
         author(url)
     elif '/manga/' in url:
         manga(url)
+
+    elif 'file' in url:
+        print('Enter path to file')
+        url = input()
+        readfile(url)
+
     else:
         logging.error('Incorrect link')
 
 
 if __name__ == '__main__':
+    setup_logging()
     main()
