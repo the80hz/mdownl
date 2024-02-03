@@ -157,7 +157,6 @@ def manga(url_manga):
         logging.info(f'Информация о манге успешно сохранена в базу данных')
     except Exception as e:
         logging.error(f"Ошибка при скачивании манги: {e}")
-        # add link to file 'error.txt'
         try:
             with open('error.txt', 'a', encoding='utf-8') as file:
                 file.write(url_manga + '\n')
@@ -192,7 +191,7 @@ def download(url_download, directory):
         manga_id_match = re.search(r'id=(\d+)', download_url)
         if not manga_id_match:
             logging.error(f"Не удалось извлечь manga_id из URL: {download_url}")
-            continue
+            return
         manga_id = int(manga_id_match.group(1))
 
         if is_file_downloaded(download_url):
@@ -205,7 +204,8 @@ def download(url_download, directory):
             response = requests.get(download_url, headers=HEADERS)
         except Exception as e:
             logging.error(f"Ошибка при скачивании файла: {e}")
-            continue
+            raise Exception(f"Ошибка при скачивании файла: {e}")
+
         if response.status_code == 200:
             file_path = os.path.join(directory, filename)
             try:
@@ -213,14 +213,15 @@ def download(url_download, directory):
                     file.write(response.content)
             except Exception as e:
                 logging.error(f"Ошибка при сохранении файла: {e}")
-                continue
+                raise Exception(f"Ошибка при сохранении файла: {e}")
+
             logging.info(f'Файл {filename} успешно скачан')
             save_file_info(manga_id, download_url)
         else:
             logging.error(f'Ошибка при скачивании файла: {filename}')
             raise Exception(f'Ошибка при скачивании файла: {filename}')
 
-    logging.info(f'Скачивание файлов завершено успешно')
+    logging.info(f'Скачивание файлов завершено')
 
 
 def main():
