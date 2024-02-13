@@ -53,6 +53,11 @@ def author(url_author):
 
     except Exception as e:
         logging.error(f"Ошибка при парсинге страницы автора: {e}")
+        try:
+            with open('error.txt', 'a', encoding='utf-8') as file:
+                file.write(url_author + '\n')
+        except Exception as e:
+            logging.error(f"Ошибка при записи ошибки в файл: {e}")
         return
 
     logging.info(f'Парсинг страницы автора завершена успешно')
@@ -79,6 +84,11 @@ def manga(url_manga):
         soup = make_request(url_manga)
     except Exception as e:
         logging.error(f"Ошибка при парсинге страницы манги: {e}")
+        try:
+            with open('error.txt', 'a', encoding='utf-8') as file:
+                file.write(url_manga + '\n')
+        except Exception as e:
+            logging.error(f"Ошибка при записи ошибки в файл: {e}")
         return
 
     # Извлечение названия манги и автора
@@ -87,6 +97,11 @@ def manga(url_manga):
         manga_title = manga_title_tag.get_text(strip=True)
     else:
         logging.error(f"Не удалось извлечь название манги")
+        try:
+            with open('error.txt', 'a', encoding='utf-8') as file:
+                file.write(url_manga + '\n')
+        except Exception as e:
+            logging.error(f"Ошибка при записи ошибки в файл: {e}")
         return
     logging.info(f'Название манги: {manga_title}')
 
@@ -95,6 +110,11 @@ def manga(url_manga):
         author_name = author_tag.get_text(strip=True)
     else:
         logging.error(f"Не удалось извлечь автора манги")
+        try:
+            with open('error.txt', 'a', encoding='utf-8') as file:
+                file.write(url_manga + '\n')
+        except Exception as e:
+            logging.error(f"Ошибка при записи ошибки в файл: {e}")
         return
     author_id = re.search(r"/mangaka/(\d+)/", author_tag['href']).group(1) if author_tag else None
 
@@ -115,6 +135,11 @@ def manga(url_manga):
         os.makedirs(save_path, exist_ok=True)
     except OSError as e:
         logging.error(f"Ошибка при создании директории с мангой: {e}")
+        try:
+            with open('error.txt', 'a', encoding='utf-8') as file:
+                file.write(url_manga + '\n')
+        except Exception as e:
+            logging.error(f"Ошибка при записи ошибки в файл: {e}")
         return
 
     # Сохранение обложки
