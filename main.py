@@ -207,6 +207,11 @@ def download(url_download, directory):
     download_links = soup.select('#download_table a[href]')
 
     # Скачивание файлов
+    if download_links is None:
+        logging.warning(f"Файлы не найдены")
+        open(os.path.join(directory, 'empty.txt'), 'w').close()
+        raise Exception(f"Файлы не найдены")
+
     logging.info(f'Найдено {len(download_links)} файлов')
     for link in download_links:
         download_url = link['href']
@@ -232,7 +237,7 @@ def download(url_download, directory):
             raise Exception(f"Ошибка при скачивании файла: {e}")
 
         if response.status_code == 200:
-            file_path = os.path.join(directory, filename)
+            file_path = os.path.join(directory, f'{manga_id}_{filename}')
             try:
                 with open(file_path, 'wb') as file:
                     file.write(response.content)
