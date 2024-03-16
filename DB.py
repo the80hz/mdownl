@@ -2,6 +2,9 @@ import sqlite3
 
 
 def init_db():
+    """
+    Инициализация базы данных. Создание таблицы для манги и файлов.
+    """
     conn = sqlite3.connect('manga.db')
     cursor = conn.cursor()
 
@@ -32,6 +35,9 @@ def init_db():
 
 
 def save_manga_info(author_name, author_id, manga_title, manga_url, tags):
+    """
+    Сохраняет информацию о манге в базу данных. Если манга уже существует, то ничего не делает.
+    """
     conn = sqlite3.connect('manga.db')
     cursor = conn.cursor()
     cursor.execute('''
@@ -43,6 +49,9 @@ def save_manga_info(author_name, author_id, manga_title, manga_url, tags):
 
 
 def save_file_info(manga_id, file_url):
+    """
+    Сохраняет информацию о файле в базу данных. Если файл уже существует, то ничего не делает.
+    """
     conn = sqlite3.connect('manga.db')
     cursor = conn.cursor()
     cursor.execute('INSERT INTO downloaded_files (manga_id, file_url) VALUES (?, ?)', (manga_id, file_url))
@@ -51,6 +60,9 @@ def save_file_info(manga_id, file_url):
 
 
 def is_manga_downloaded(url_manga):
+    """
+    Проверяет, существует ли манга в базе данных. Если существует, возвращает True, иначе False.
+    """
     conn = sqlite3.connect('manga.db')
     cursor = conn.cursor()
 
@@ -62,6 +74,9 @@ def is_manga_downloaded(url_manga):
 
 
 def is_file_downloaded(file_url):
+    """
+    Проверяет, существует ли файл в базе данных. Если существует, возвращает True, иначе False.
+    """
     conn = sqlite3.connect('manga.db')
     cursor = conn.cursor()
 

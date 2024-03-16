@@ -15,9 +15,12 @@ HEADERS = {
 }
 
 
-def make_request(url):
+def make_request(url: str) -> BeautifulSoup or None:
     """
-    Выполняет HTTP-запрос и возвращает объект BeautifulSoup.
+    Отправляет GET-запрос по указанному URL и возвращает объект BeautifulSoup.
+
+    :param url: URL
+    :return: Объект BeautifulSoup
     """
     try:
         with requests.Session() as session:
@@ -30,16 +33,25 @@ def make_request(url):
         return None
 
 
-def clean_filename(filename):
+def clean_filename(filename: str) -> str:
     """
-    Очищает имя файла от запрещенных символов.
+    Очищает имя файла от запрещенных символов для большинства ОС.
+
+    :param filename: Имя файла
+    :return: Очищенное имя файла
     """
     # Список запрещенных символов в именах файлов для большинства ОС
     forbidden_chars = r'[\\/*?:"<>|]'
     return re.sub(forbidden_chars, '', filename)
 
 
-def extract_domain(url):
+def extract_domain(url: str) -> str:
+    """
+    Извлекает домен из URL.
+
+    :param url: URL
+    :return: Домен
+    """
     pattern = re.compile(r'https?://[^/]+')
     match = pattern.search(url)
     if match:
@@ -48,15 +60,26 @@ def extract_domain(url):
         return url
 
 
-def rm_prefix(url):
+def rm_prefix(url: str) -> str:
+    """
+    Очищает домен от лишних префиксов.
+
+    :param url: URL
+    :return: Очищенный URL
+    """
     pattern = r"https?://(?:[^/]+\.)?([^/]+\.[^/]+)/(.*?)"
     cleaned_url = re.sub(pattern, r"https://\1/\2", url)
     return cleaned_url
 
 
-def setup_logging():
+def setup_logging() -> None:
+    """
+    Настраивает логирование.
+
+    :return: None
+    """
     logger = logging.getLogger()
-    logger.setLevel(logging.INFO)  # Устанавливаем уровень логгирования
+    logger.setLevel(logging.INFO)  # Устанавливаем уровень логирования
 
     # Обработчик для записи логов в файл
     file_handler = logging.FileHandler('download.log', 'a')
@@ -71,7 +94,14 @@ def setup_logging():
     logger.addHandler(console_handler)
 
 
-def merge_txt_files(directory, output_file):
+def merge_txt_files(directory: str, output_file: str) -> None:
+    """
+    Объединяет все .txt файлы из указанной директории в один файл.
+
+    :param directory: Директория с .txt файлами
+    :param output_file: Файл для записи объединенных строк
+    :return: None
+    """
     # Создаем множество для хранения уникальных строк
     unique_lines = set()
 

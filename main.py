@@ -11,20 +11,13 @@ from DB import init_db, save_manga_info, save_file_info, is_manga_downloaded, is
 from utils import make_request, clean_filename, extract_domain, rm_prefix, HEADERS, setup_logging
 
 
-def readfile(path):
-    try:
-        with open(path, 'r', encoding='utf-8') as file:
-            for line in file:
-                line = line.strip()
-                if line and 'mangaka' in line:
-                    author(line)
-                elif line and 'manga' in line:
-                    manga(line)
-    except Exception as e:
-        logging.error(f"Ошибка при чтении файла: {e}")
+def process_line(line: str) -> None:
+    """
+    Обработка ссылки. Вызывает функцию для обработки строки в зависимости от ее содержимого.
 
-
-def process_line(line):
+    :param line: Ссылка на страницу автора или манги
+    :return: None
+    """
     try:
         line = line.strip()
         if line and 'mangaka' in line:
@@ -35,7 +28,13 @@ def process_line(line):
         logging.error(f"Ошибка при обработке строки: {e}")
 
 
-def readfile_parallel(path):
+def readfile_parallel(path: str) -> None:
+    """
+    Чтение файла и параллельная обработка строк.
+
+    :param path: Путь к файлу
+    :return: None
+    """
     try:
         with open(path, 'r', encoding='utf-8') as file:
             # Создание списка всех строк файла
@@ -57,7 +56,13 @@ def readfile_parallel(path):
         logging.error(f"Ошибка при чтении файла: {e}")
 
 
-def author(url_author):
+def author(url_author: str) -> None:
+    """
+    Парсинг страницы автора. Извлекает все манги автора и загружает их.
+
+    :param url_author: Ссылка на страницу автора
+    :return: None
+    """
     list_titles = []
 
     count = 0
@@ -106,8 +111,22 @@ def author(url_author):
         logging.error(f"Ошибка при парсинге манги: {e}")
     logging.info(f'Парсинг всех манг этого автора завершен')
 
+    try:
+        with open('done.txt', 'a', encoding='utf-8') as file:
+            file.write(url_author + '\n')
+    except Exception as e:
+        logging.error(f"Ошибка при записи в файл: {e}")
+    logging.info(f'Запись в файл "done.txt" завершена')
 
-def manga(url_manga):
+
+def manga(url_manga: str) -> None:
+    """
+    Парсинг манги по указанной ссылке. Скачивает мангу и создает директорию с информацией о манге.
+    Сохраняет информацию о манге в базу данных.
+
+    :param url_manga: Ссылка на мангу
+    :return: None
+    """
     logging.info(f'Парсинг манги: {url_manga}')
 
     # Проверка на наличие манги в базе данных
@@ -225,10 +244,21 @@ def manga(url_manga):
         return
     logging.info(f'Скачивание манги завершено успешно')
 
+    try:
+        with open('done.txt', 'a', encoding='utf-8') as file:
+            file.write(url_manga + '\n')
+    except Exception as e:
+        logging.error(f"Ошибка при записи в файл: {e}")
+    logging.info(f'Запись в файл "done.txt" завершена')
 
-def download(url_download, directory):
+
+def download(url_download: str, directory: str) -> None:
     """
-    Скачивает файлы по указанным URL и сохраняет их в указанной директории.
+    Движок скачивания файлов. Скачивает файлы по ссылке и сохраняет их в указанную директорию.
+
+    :param url_download: Ссылка для скачивания
+    :param directory: Директория для сохранения файлов
+    :return: None
     """
     logging.info(f'Парсинг страницы скачивания: {url_download}')
     try:
@@ -294,7 +324,8 @@ def download(url_download, directory):
 
 def main():
     """
-    В зависимости от того, какая ссылка подается, вызывается соответствующая функция.
+    Программа для скачивания манги с сайта manga сайт.
+    Проверяет, является ли введенная ссылка ссылкой на автора или мангу или вовсе на файл.
     """
     if len(sys.argv) > 1:
         url = sys.argv[1]
