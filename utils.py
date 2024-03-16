@@ -1,5 +1,7 @@
 import logging
 import re
+import glob
+import os
 
 import requests
 from bs4 import BeautifulSoup
@@ -57,7 +59,7 @@ def setup_logging():
     logger.setLevel(logging.INFO)  # Устанавливаем уровень логгирования
 
     # Обработчик для записи логов в файл
-    file_handler = logging.FileHandler('download.log', 'w')
+    file_handler = logging.FileHandler('download.log', 'a')
     file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
 
     # Обработчик для вывода логов в консоль
@@ -67,3 +69,20 @@ def setup_logging():
     # Добавляем обработчики к логгеру
     logger.addHandler(file_handler)
     logger.addHandler(console_handler)
+
+
+def merge_txt_files(directory, output_file):
+    # Создаем множество для хранения уникальных строк
+    unique_lines = set()
+
+    # Ищем все .txt файлы в указанной директории
+    for txt_file in glob.glob(os.path.join(directory, '*.txt')):
+        with open(txt_file, 'r', encoding='utf-8') as file:
+            for line in file:
+                # Удаляем пробельные символы в начале и конце строки и добавляем строку в множество
+                unique_lines.add(line.strip())
+
+    # Записываем уникальные строки в файл вывода
+    with open(output_file, 'w', encoding='utf-8') as output:
+        for line in sorted(unique_lines):  # Опционально сортируем строки перед записью
+            output.write(line + '\n')

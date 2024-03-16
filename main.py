@@ -5,6 +5,8 @@ import os
 import logging
 import sys
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 from DB import init_db, save_manga_info, save_file_info, is_manga_downloaded, is_file_downloaded
 from utils import make_request, clean_filename, extract_domain, rm_prefix, HEADERS, setup_logging
 
@@ -18,6 +20,39 @@ def readfile(path):
                     author(line)
                 elif line and 'manga' in line:
                     manga(line)
+    except Exception as e:
+        logging.error(f"Ошибка при чтении файла: {e}")
+
+
+def process_line(line):
+    try:
+        line = line.strip()
+        if line and 'mangaka' in line:
+            author(line)
+        elif line and 'manga' in line:
+            manga(line)
+    except Exception as e:
+        logging.error(f"Ошибка при обработке строки: {e}")
+
+
+def readfile_parallel(path):
+    try:
+        with open(path, 'r', encoding='utf-8') as file:
+            # Создание списка всех строк файла
+            lines = file.readlines()
+
+        # Использование ThreadPoolExecutor для параллельной обработки строк
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            # Запуск задачи обработки для каждой строки
+            futures = [executor.submit(process_line, line) for line in lines]
+
+            # Ожидание завершения всех задач
+            for future in as_completed(futures):
+                try:
+                    # Получение результата выполнения задачи, если необходимо
+                    result = future.result()
+                except Exception as e:
+                    logging.error(f"Ошибка при выполнении задачи: {e}")
     except Exception as e:
         logging.error(f"Ошибка при чтении файла: {e}")
 
@@ -207,9 +242,12 @@ def download(url_download, directory):
     download_links = soup.select('#download_table a[href]')
 
     # Скачивание файлов
-    if download_links is None:
+    if download_links is None or 0:
         logging.warning(f"Файлы не найдены")
-        open(os.path.join(directory, 'empty.txt'), 'w').close()
+        try:
+            open(os.path.join(directory, 'empty.txt'), 'w').close()
+        except Exception as e:
+            logging.error(f"Ошибка при создании пустого файла: {e}")
         raise Exception(f"Файлы не найдены")
 
     logging.info(f'Найдено {len(download_links)} файлов')
@@ -272,13 +310,8 @@ def main():
     elif '/manga/' in url:
         manga(url)
 
-    elif 'file' in url:
-        print('Enter path to file')
-        url = input()
-        readfile(url)
-
     else:
-        logging.error('Incorrect link')
+        readfile_parallel(url)
 
 
 if __name__ == '__main__':
