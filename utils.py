@@ -116,3 +116,18 @@ def merge_txt_files(directory: str, output_file: str) -> None:
     with open(output_file, 'w', encoding='utf-8') as output:
         for line in sorted(unique_lines):  # Опционально сортируем строки перед записью
             output.write(line + '\n')
+
+
+def get_manga_id(url: str) -> int or None:
+    """
+    Извлекает идентификатор манги из URL.
+
+    :param url: URL
+    :return: Идентификатор манги
+    """
+    manga_id = re.search(r'id=(\d+)', url)
+    if not manga_id:
+        logging.error(f"Не удалось извлечь manga_id из URL: {url}")
+        return None
+    return int(manga_id.group(1))
+

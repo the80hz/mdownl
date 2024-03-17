@@ -1,2 +1,6 @@
+# for web scraping
 requests
 bs4
+
+# for browser automation
+playwright

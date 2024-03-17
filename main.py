@@ -8,7 +8,7 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from DB import init_db, save_manga_info, save_file_info, is_manga_downloaded, is_file_downloaded
-from utils import make_request, clean_filename, extract_domain, rm_prefix, HEADERS, setup_logging
+from utils import make_request, clean_filename, extract_domain, rm_prefix, HEADERS, setup_logging, get_manga_id
 
 
 def process_line(line: str) -> None:
@@ -286,11 +286,7 @@ def download(url_download: str, directory: str) -> None:
         filename = link.get_text()
 
         # Извлечение manga_id из URL
-        manga_id_match = re.search(r'id=(\d+)', download_url)
-        if not manga_id_match:
-            logging.error(f"Не удалось извлечь manga_id из URL: {download_url}")
-            return
-        manga_id = int(manga_id_match.group(1))
+        manga_id = get_manga_id(download_url)
 
         if is_file_downloaded(download_url):
             logging.info(f"Файл уже скачан: {download_url}")
@@ -336,7 +332,7 @@ def main():
 
     init_db()
 
-    if '/mangaka/' in url:
+    if '/mangaka/' or 'series' in url:
         author(url)
     elif '/manga/' in url:
         manga(url)
