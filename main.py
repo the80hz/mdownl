@@ -332,7 +332,7 @@ def main():
 
     init_db()
 
-    if '/mangaka/' in url:
+    if '/mangaka/' or 'series' in url:
         author(url)
     elif '/manga/' in url:
         manga(url)
