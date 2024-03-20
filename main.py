@@ -49,7 +49,8 @@ def readfile_parallel(path: str) -> None:
             for future in as_completed(futures):
                 try:
                     # Получение результата выполнения задачи, если необходимо
-                    result = future.result()
+                    # result = future.result()
+                    pass
                 except Exception as e:
                     logging.error(f"Ошибка при выполнении задачи: {e}")
     except Exception as e:
@@ -332,7 +333,7 @@ def main():
 
     init_db()
 
-    if '/mangaka/' or 'series' in url:
+    if '/mangaka/' in url:
         author(url)
     elif '/manga/' in url:
         manga(url)

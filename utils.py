@@ -2,6 +2,7 @@ import logging
 import re
 import glob
 import os
+import threading
 
 import requests
 from bs4 import BeautifulSoup
@@ -81,17 +82,21 @@ def setup_logging() -> None:
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)  # Устанавливаем уровень логирования
 
+    # Формат сообщения лога теперь включает идентификатор потока
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - [Thread %(thread)d] - %(message)s')
+
     # Обработчик для записи логов в файл
     file_handler = logging.FileHandler('download.log', 'a')
-    file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+    file_handler.setFormatter(formatter)
 
     # Обработчик для вывода логов в консоль
     console_handler = logging.StreamHandler()
-    console_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+    console_handler.setFormatter(formatter)
 
     # Добавляем обработчики к логгеру
     logger.addHandler(file_handler)
     logger.addHandler(console_handler)
+
 
 
 def merge_txt_files(directory: str, output_file: str) -> None:

@@ -7,7 +7,12 @@ from DB import init_db, save_manga_info, save_file_info, is_manga_downloaded, is
 from utils import make_request, clean_filename, extract_domain, rm_prefix, setup_logging, get_manga_id
 
 
-async def handle_page(page):
+async def handle_page(page: str) -> None:
+    """
+    Обработка страницы. Проверка на скачанную мангу, если true - скрыть строку с контентом
+    :param page: страница
+    :return: None
+    """
     logging.info(f"Обработка страницы {page.url}")
 
     content_rows = await page.query_selector_all('div[class="content_row"]')
@@ -29,7 +34,11 @@ async def handle_page(page):
             logging.info(f"Строка с контентом {content_row} скрыта")
 
 
-async def main():
+async def main() -> None:
+    """
+    Основная функция. Открывает браузер с начальной страницей google.com.
+    :return: None
+    """
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=False)
         page = await browser.new_page()
