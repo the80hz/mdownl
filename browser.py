@@ -57,5 +57,5 @@ async def main() -> None:
 
 
 if __name__ == '__main__':
-    setup_logging()
+    setup_logging('browser.log')
     asyncio.run(main())

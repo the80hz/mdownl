@@ -343,5 +343,5 @@ def main():
 
 
 if __name__ == '__main__':
-    setup_logging()
+    setup_logging('download.log')
     main()

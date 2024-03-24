@@ -73,10 +73,11 @@ def rm_prefix(url: str) -> str:
     return cleaned_url
 
 
-def setup_logging() -> None:
+def setup_logging(filename: str) -> None:
     """
     Настраивает логирование.
 
+    :param filename: Имя файла для записи логов
     :return: None
     """
     logger = logging.getLogger()
@@ -86,7 +87,7 @@ def setup_logging() -> None:
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - [Thread %(thread)d] - %(message)s')
 
     # Обработчик для записи логов в файл
-    file_handler = logging.FileHandler('download.log', 'a')
+    file_handler = logging.FileHandler(filename, 'a')
     file_handler.setFormatter(formatter)
 
     # Обработчик для вывода логов в консоль
@@ -96,7 +97,6 @@ def setup_logging() -> None:
     # Добавляем обработчики к логгеру
     logger.addHandler(file_handler)
     logger.addHandler(console_handler)
-
 
 
 def merge_txt_files(directory: str, output_file: str) -> None:
