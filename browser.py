@@ -17,7 +17,7 @@ async def handle_page(page: str) -> None:
 
     content_rows = await page.query_selector_all('div[class="content_row"]')
 
-    logging.info(f"Найдено {len(content_rows)} строк с контентом")
+    hidden = 0
 
     for content_row in content_rows:
         logging.info(f"Обработка строки с контентом {content_row}")
@@ -31,7 +31,21 @@ async def handle_page(page: str) -> None:
         if is_manga_downloaded(full_url):
             logging.info(f"Манга {full_url} уже скачана")
             await content_row.evaluate('(content_row) => content_row.style.display = "none"')
+            hidden += 1
             logging.info(f"Строка с контентом {content_row} скрыта")
+
+        genre_block = await content_row.query_selector('div[class="genre"]')
+        a_tags = await genre_block.query_selector_all('a')
+        tags = [await a_tag.inner_text() for a_tag in a_tags] if a_tags else []
+        tags_hide = ['-']
+        if any(tag in tags for tag in tags_hide):
+            logging.info(f"Манга {full_url} содержит запрещенные теги")
+            await content_row.evaluate('(content_row) => content_row.style.display = "none"')
+            hidden += 1
+            logging.info(f"Строка с контентом {content_row} скрыта")
+
+    logging.info(f"Найдено {len(content_rows)} строк с контентом")
+    logging.info(f"Скрыто {hidden} строк с контентом")
 
 
 async def main() -> None:
@@ -45,7 +59,7 @@ async def main() -> None:
 
         page.on('load', lambda _page: asyncio.create_task(handle_page(_page)))
 
-        await page.goto("https://www.google.com")
+        await page.goto("https://google.com")
 
         try:
             # Wait indefinitely until an explicit keyboard interrupt (Ctrl+C) to allow manual testing.

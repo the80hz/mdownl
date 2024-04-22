@@ -46,13 +46,13 @@ def readfile_parallel(path: str) -> None:
             futures = [executor.submit(process_line, line) for line in lines]
 
             # Ожидание завершения всех задач
-            for future in as_completed(futures):
+            '''for future in as_completed(futures):
                 try:
                     # Получение результата выполнения задачи, если необходимо
-                    # result = future.result()
+                    result = future.result()
                     pass
                 except Exception as e:
-                    logging.error(f"Ошибка при выполнении задачи: {e}")
+                    logging.error(f"Ошибка при выполнении задачи: {e}")'''
     except Exception as e:
         logging.error(f"Ошибка при чтении файла: {e}")
 
