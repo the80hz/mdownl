@@ -3,7 +3,7 @@ import sqlite3
 
 def init_db():
     """
-    Инициализация базы данных. Создание таблиц для манги, серий, циклов/групп, переводчиков и тэгов.
+    Инициализация базы данных. Создание таблиц для манги, серий, циклов/групп, переводчиков, тэгов и авторов.
     """
     conn = sqlite3.connect('manga.db')
     cursor = conn.cursor()
@@ -18,7 +18,7 @@ def init_db():
 
     # Таблица для циклов/групп
     cursor.execute('''
-        CREATE TABLE IF NOT EXISTS groupes (
+        CREATE TABLE IF NOT EXISTS cycles (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT UNIQUE
         )
@@ -40,12 +40,21 @@ def init_db():
         )
     ''')
 
+    # Таблица для авторов
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS authors (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE,
+            work_count INTEGER
+        )
+    ''')
+
     # Таблица для манги
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS manga (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT,
-            author TEXT,
+            author_id INTEGER,
             series_id INTEGER,
             cycle_id INTEGER,
             translator_id INTEGER,
@@ -54,6 +63,7 @@ def init_db():
             tags TEXT,
             chapter_count INTEGER,
             upload_successful BOOLEAN,
+            FOREIGN KEY (author_id) REFERENCES authors (id),
             FOREIGN KEY (series_id) REFERENCES series (id),
             FOREIGN KEY (cycle_id) REFERENCES cycles (id),
             FOREIGN KEY (translator_id) REFERENCES translators (id)
@@ -63,7 +73,7 @@ def init_db():
     # Таблица для файлов
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS downloaded_files (
-            id INTEGER PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             manga_id INTEGER,
             file_url TEXT,
             FOREIGN KEY (manga_id) REFERENCES manga (id)
@@ -74,12 +84,27 @@ def init_db():
     conn.close()
 
 
-def save_manga_info(title, author, series, cycle, translator, upload_date, description, tags, chapter_count, upload_successful):
+def save_manga_info(title, author, series, cycle, translator, upload_date, description, tags, chapter_count,
+                    upload_successful):
     """
     Сохраняет информацию о манге в базу данных. Если манга уже существует, то ничего не делает.
     """
     conn = sqlite3.connect('manga.db')
     cursor = conn.cursor()
+
+    # Вставка или получение id для автора
+    cursor.execute('''
+        INSERT OR IGNORE INTO authors (name, work_count) VALUES (?, 0)
+    ''', (author,))
+    cursor.execute('SELECT id, work_count FROM authors WHERE name = ?', (author,))
+    author_row = cursor.fetchone()
+    author_id = author_row[0]
+    work_count = author_row[1]
+
+    # Обновление количества работ автора
+    cursor.execute('''
+        UPDATE authors SET work_count = ? WHERE id = ?
+    ''', (work_count + 1, author_id))
 
     # Вставка или получение id для серии
     cursor.execute('''
@@ -104,9 +129,11 @@ def save_manga_info(title, author, series, cycle, translator, upload_date, descr
 
     # Вставка информации о манге
     cursor.execute('''
-        INSERT INTO manga (title, author, series_id, cycle_id, translator_id, upload_date, description, tags, chapter_count, upload_successful)
+        INSERT INTO manga (title, author_id, series_id, cycle_id, translator_id, upload_date, description, tags, 
+        chapter_count, upload_successful)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (title, author, series_id, cycle_id, translator_id, upload_date, description, tags, chapter_count, upload_successful))
+    ''', (title, author_id, series_id, cycle_id, translator_id, upload_date, description, tags,
+          chapter_count, upload_successful))
 
     conn.commit()
     conn.close()
@@ -118,7 +145,8 @@ def save_file_info(manga_id, file_url):
     """
     conn = sqlite3.connect('manga.db')
     cursor = conn.cursor()
-    cursor.execute('INSERT INTO downloaded_files (manga_id, file_url) VALUES (?, ?)', (manga_id, file_url))
+    cursor.execute('INSERT INTO downloaded_files (manga_id, file_url) VALUES (?, ?)', (manga_id,
+                                                                                       file_url))
     conn.commit()
     conn.close()
 
@@ -130,7 +158,7 @@ def is_manga_downloaded(title):
     conn = sqlite3.connect('manga.db')
     cursor = conn.cursor()
 
-    cursor.execute('SELECT EXISTS(SELECT 1 FROM manga WHERE title=? LIMIT 1)', (title,))
+    cursor.execute('SELECT EXISTS(SELECT 1 FROM manga WHERE title=?)', (title,))
     exists = cursor.fetchone()[0]
 
     conn.close()
@@ -144,7 +172,7 @@ def is_file_downloaded(file_url):
     conn = sqlite3.connect('manga.db')
     cursor = conn.cursor()
 
-    cursor.execute('SELECT EXISTS(SELECT 1 FROM downloaded_files WHERE file_url=? LIMIT 1)', (file_url,))
+    cursor.execute('SELECT EXISTS(SELECT 1 FROM downloaded_files WHERE file_url=?)', (file_url,))
     exists = cursor.fetchone()[0]
 
     conn.close()
