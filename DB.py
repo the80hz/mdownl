@@ -62,6 +62,7 @@ def init_db():
             description TEXT,
             tags TEXT,
             chapter_count INTEGER,
+            page_count INTEGER,
             upload_successful BOOLEAN,
             FOREIGN KEY (author_id) REFERENCES authors (id),
             FOREIGN KEY (series_id) REFERENCES series (id),
@@ -84,7 +85,7 @@ def init_db():
     conn.close()
 
 
-def save_manga_info(title, author, series, cycle, translator, upload_date, description, tags, chapter_count,
+def save_manga_info(title, author, series, cycle, translator, upload_date, description, tags, chapter_count, page_count,
                     upload_successful):
     """
     Сохраняет информацию о манге в базу данных. Если манга уже существует, то ничего не делает.
@@ -130,10 +131,11 @@ def save_manga_info(title, author, series, cycle, translator, upload_date, descr
     # Вставка информации о манге
     cursor.execute('''
         INSERT INTO manga (title, author_id, series_id, cycle_id, translator_id, upload_date, description, tags, 
-        chapter_count, upload_successful)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (title, author_id, series_id, cycle_id, translator_id, upload_date, description, tags,
-          chapter_count, upload_successful))
+        chapter_count, page_count, upload_successful)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        title, author_id, series_id, cycle_id, translator_id, upload_date, description, tags, chapter_count, page_count,
+        upload_successful))
 
     conn.commit()
     conn.close()
