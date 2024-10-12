@@ -9,6 +9,9 @@ from DB import init_db, save_manga_info, save_file_info, is_manga_downloaded, is
 from utils import make_request, clean_filename, extract_domain, rm_prefix, setup_logging, get_manga_id
 
 
+# Определите список запрещённых тегов
+FORBIDDEN_TAGS = ['-']
+
 async def handle_page(page: str) -> None:
     """
     Обработка страницы. Проверка на скачанную мангу, если true - скрыть строку с контентом
@@ -39,8 +42,7 @@ async def handle_page(page: str) -> None:
         genre_block = await content_row.query_selector('div[class="genre"]')
         a_tags = await genre_block.query_selector_all('a')
         tags = [await a_tag.inner_text() for a_tag in a_tags] if a_tags else []
-        tags_hide = ['-']
-        if any(tag in tags for tag in tags_hide):
+        if any(tag in tags for tag in FORBIDDEN_TAGS):
             logging.info(f"Манга {full_url} содержит запрещенные теги")
             await content_row.evaluate('(content_row) => content_row.style.display = "none"')
             hidden += 1
@@ -74,4 +76,5 @@ async def main() -> None:
 
 if __name__ == '__main__':
     setup_logging('browser.log')
+    init_db()
     asyncio.run(main())
