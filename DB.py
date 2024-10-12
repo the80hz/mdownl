@@ -40,14 +40,13 @@ def save_manga_info(author_name, author_id, manga_title, manga_url, tags):
     """
     Сохраняет информацию о манге в базу данных. Если манга уже существует, то ничего не делает.
     """
-    conn = sqlite3.connect('manga.db')
-    cursor = conn.cursor()
-    cursor.execute('''
-        INSERT INTO manga (author_name, author_id, manga_title, manga_url, tags)
-        VALUES (?, ?, ?, ?, ?)
-    ''', (author_name, author_id, manga_title, manga_url, ','.join(tags)))
-    conn.commit()
-    conn.close()
+    with sqlite3.connect('manga.db') as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO manga (author_name, author_id, manga_title, manga_url, tags)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (author_name, author_id, manga_title, manga_url, ','.join(tags)))
+        conn.commit()
 
 
 def save_file_info(manga_id, file_url):

@@ -28,7 +28,7 @@ def make_request(url: str) -> BeautifulSoup or None:
     try:
         with requests.Session() as session:
             session.headers.update(HEADERS)
-            response = session.get(url)
+            response = session.get(url, timeout=30)  # Добавление таймаута
             response.raise_for_status()
             return BeautifulSoup(response.text, 'html.parser')
     except requests.RequestException as e:

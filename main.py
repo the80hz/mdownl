@@ -139,6 +139,8 @@ def manga(url_manga: str) -> None:
 
     try:
         soup = make_request(url_manga)
+        if soup is None:
+            logging.error(f"Не удалось получить содержимое страницы манги: {url_manga}")
     except Exception as e:
         logging.error(f"Ошибка при парсинге страницы манги: {e}")
         try:
@@ -275,13 +277,13 @@ def download(url_download: str, directory: str) -> None:
     download_links = soup.select('#download_table a[href]')
 
     # Скачивание файлов
-    if download_links is None or 0:
-        logging.warning(f"Файлы не найдены")
+    if not download_links:
+        logging.warning("Файлы не найдены")
         try:
             open(os.path.join(directory, 'empty.txt'), 'w').close()
         except Exception as e:
             logging.error(f"Ошибка при создании пустого файла: {e}")
-        raise Exception(f"Файлы не найдены")
+        raise Exception("Файлы не найдены")
 
     logging.info(f'Найдено {len(download_links)} файлов')
     for link in download_links:
