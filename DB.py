@@ -3,7 +3,7 @@ import sqlite3
 
 def init_db():
     """
-    Инициализация базы данных. Создание таблиц для манги, авторов, серий, циклов, переводчиков и тэгов.
+    Инициализация базы данных. Создание таблицы для манги и файлов.
     """
     conn = sqlite3.connect('manga.db')
     cursor = conn.cursor()
@@ -11,124 +11,62 @@ def init_db():
     # Таблица для манги
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS manga (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT,
-            author_id INTEGER,
-            series_id INTEGER DEFAULT NULL,
-            cycle_id INTEGER DEFAULT NULL,
-            translator_id INTEGER,
-            related_manga_ids TEXT DEFAULT NULL,
-            upload_date TEXT,
-            tag_ids TEXT,
+            id INTEGER PRIMARY KEY,
+            author_name TEXT,
+            author_id TEXT,
+            manga_title TEXT,
             manga_url TEXT,
-            cover_path TEXT DEFAULT NULL,
-            FOREIGN KEY (author_id) REFERENCES authors (id),
-            FOREIGN KEY (series_id) REFERENCES series (id),
-            FOREIGN KEY (cycle_id) REFERENCES cycles (id),
-            FOREIGN KEY (translator_id) REFERENCES translators (id)
-        )
-    ''')
-
-    # Таблица для авторов
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS authors (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT UNIQUE,
-            manga_ids TEXT,
-            author_url TEXT
-        )
-    ''')
-
-    # Таблица для серий
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS series (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT UNIQUE,
-            manga_ids TEXT,
-            series_url TEXT
-        )
-    ''')
-
-    # Таблица для циклов
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS cycles (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT UNIQUE,
-            manga_ids TEXT
-        )
-    ''')
-
-    # Таблица для переводчиков
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS translators (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nickname TEXT UNIQUE,
-            manga_ids TEXT,
-            translator_url TEXT
-        )
-    ''')
-
-    # Таблица для тэгов
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS tags (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT UNIQUE,
-            manga_ids TEXT
+            tags TEXT
         )
     ''')
 
     # Таблица для файлов
     cursor.execute('''
-            CREATE TABLE IF NOT EXISTS downloaded_files (
-                id INTEGER PRIMARY KEY,
-                manga_id INTEGER,
-                file_url TEXT,
-                FOREIGN KEY (manga_id) REFERENCES manga (id)
-            )
-        ''')
+        CREATE TABLE IF NOT EXISTS downloaded_files (
+            id INTEGER PRIMARY KEY,
+            manga_id INTEGER,
+            file_url TEXT,
+            FOREIGN KEY (manga_id) REFERENCES manga (id)
+        )
+    ''')
 
     conn.commit()
     conn.close()
 
 
-def save_author_info(author_id, name, author_url):
+def save_manga_info(author_name, author_id, manga_title, manga_url, tags):
     """
-    Сохраняет информацию об авторе в базу данных. Если автор уже существует, то ничего не делает.
+    Сохраняет информацию о манге в базу данных. Если манга уже существует, то ничего не делает.
     """
     conn = sqlite3.connect('manga.db')
     cursor = conn.cursor()
-
     cursor.execute('''
-        INSERT OR IGNORE INTO authors (id, name, author_url) VALUES (?, ?, ?)
-    ''', (author_id, name, author_url))
-
+        INSERT INTO manga (author_name, author_id, manga_title, manga_url, tags)
+        VALUES (?, ?, ?, ?, ?)
+    ''', (author_name, author_id, manga_title, manga_url, ','.join(tags)))
     conn.commit()
     conn.close()
 
 
-def save_manga_info_basic(manga_id, title, author_id, manga_url):
+def save_file_info(manga_id, file_url):
     """
-    Сохраняет базовую информацию о манге в базу данных. Если манга уже существует, то ничего не делает.
+    Сохраняет информацию о файле в базу данных. Если файл уже существует, то ничего не делает.
     """
     conn = sqlite3.connect('manga.db')
     cursor = conn.cursor()
-
-    cursor.execute('''
-        INSERT OR IGNORE INTO manga (id, title, author_id, manga_url) VALUES (?, ?, ?, ?)
-    ''', (manga_id, title, author_id, manga_url))
-
+    cursor.execute('INSERT INTO downloaded_files (manga_id, file_url) VALUES (?, ?)', (manga_id, file_url))
     conn.commit()
     conn.close()
 
 
-def is_manga_downloaded(manga_id):
+def is_manga_downloaded(url_manga):
     """
     Проверяет, существует ли манга в базе данных. Если существует, возвращает True, иначе False.
     """
     conn = sqlite3.connect('manga.db')
     cursor = conn.cursor()
 
-    cursor.execute('SELECT EXISTS(SELECT 1 FROM manga WHERE id=?)', (manga_id,))
+    cursor.execute('SELECT EXISTS(SELECT 1 FROM manga WHERE manga_url=? LIMIT 1)', (url_manga,))
     exists = cursor.fetchone()[0]
 
     conn.close()
@@ -142,12 +80,8 @@ def is_file_downloaded(file_url):
     conn = sqlite3.connect('manga.db')
     cursor = conn.cursor()
 
-    cursor.execute('SELECT EXISTS(SELECT 1 FROM downloaded_files WHERE file_url=?)', (file_url,))
+    cursor.execute('SELECT EXISTS(SELECT 1 FROM downloaded_files WHERE file_url=? LIMIT 1)', (file_url,))
     exists = cursor.fetchone()[0]
 
     conn.close()
     return exists == 1
-
-
-if __name__ == '__main__':
-    init_db()

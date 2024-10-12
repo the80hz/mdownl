@@ -9,10 +9,10 @@ from bs4 import BeautifulSoup
 
 HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,"
-            "application/signed-exchange;v=b3;q=0.9",
+              "application/signed-exchange;v=b3;q=0.9",
     "Referer": "https://manga-chan.me/",
     "User-Agent": "Mozilla/5.0 (X11; CrOS x86_64 12871.102.0) AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/81.0.4044.141 Safari/537.36"
+                  "Chrome/81.0.4044.141 Safari/537.36"
 }
 
 

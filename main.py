@@ -7,7 +7,7 @@ import sys
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from DB import init_db, save_manga_info_basic, save_author_info, is_manga_downloaded, is_file_downloaded
+from DB import init_db, save_manga_info, save_file_info, is_manga_downloaded, is_file_downloaded
 from utils import make_request, clean_filename, extract_domain, rm_prefix, HEADERS, setup_logging, get_manga_id
 
 
@@ -120,28 +120,28 @@ def author(url_author: str) -> None:
     logging.info(f'Запись в файл "done.txt" завершена')
 
 
-def manga(manga_url: str) -> None:
+def manga(url_manga: str) -> None:
     """
     Парсинг манги по указанной ссылке. Скачивает мангу и создает директорию с информацией о манге.
     Сохраняет информацию о манге в базу данных.
 
-    :param manga_url: Ссылка на мангу
+    :param url_manga: Ссылка на мангу
     :return: None
     """
-    logging.info(f'Парсинг манги: {manga_url}')
+    logging.info(f'Парсинг манги: {url_manga}')
 
     # Проверка на наличие манги в базе данных
-    if is_manga_downloaded(manga_url):
+    if is_manga_downloaded(url_manga):
         logging.info(f"Манга уже скачана")
         return
 
     try:
-        soup = make_request(manga_url)
+        soup = make_request(url_manga)
     except Exception as e:
         logging.error(f"Ошибка при парсинге страницы манги: {e}")
         try:
             with open('error.txt', 'a', encoding='utf-8') as file:
-                file.write(manga_url + '\n')
+                file.write(url_manga + '\n')
         except Exception as e:
             logging.error(f"Ошибка при записи ошибки в файл: {e}")
         return
@@ -154,7 +154,7 @@ def manga(manga_url: str) -> None:
         logging.error(f"Не удалось извлечь название манги")
         try:
             with open('error.txt', 'a', encoding='utf-8') as file:
-                file.write(manga_url + '\n')
+                file.write(url_manga + '\n')
         except Exception as e:
             logging.error(f"Ошибка при записи ошибки в файл: {e}")
         return
@@ -167,7 +167,7 @@ def manga(manga_url: str) -> None:
         logging.error(f"Не удалось извлечь автора манги")
         try:
             with open('error.txt', 'a', encoding='utf-8') as file:
-                file.write(manga_url + '\n')
+                file.write(url_manga + '\n')
         except Exception as e:
             logging.error(f"Ошибка при записи ошибки в файл: {e}")
         return
@@ -178,7 +178,7 @@ def manga(manga_url: str) -> None:
     tag_names = [tag.get_text() for tag in tag_elements] if tag_elements else []
 
     manga_info = (f'Название: {manga_title}\nАвтор: {author_name}\n'
-                  f'ID автора: {author_id}\nТэги: {tag_names}\nСсылка: {manga_url}')
+                  f'ID автора: {author_id}\nТэги: {tag_names}\nСсылка: {url_manga}')
 
     # Создание пути для сохранения файла
     manga_title = clean_filename(manga_title)
@@ -192,7 +192,7 @@ def manga(manga_url: str) -> None:
         logging.error(f"Ошибка при создании директории с мангой: {e}")
         try:
             with open('error.txt', 'a', encoding='utf-8') as file:
-                file.write(manga_url + '\n')
+                file.write(url_manga + '\n')
         except Exception as e:
             logging.error(f"Ошибка при записи ошибки в файл: {e}")
         return
@@ -227,20 +227,19 @@ def manga(manga_url: str) -> None:
 
     # Смена URL для скачивания
     logging.info(f'Скачивание манги')
-    url_download = re.sub(r"(https://)(.*?)(/manga/)", r"\1\2/download/", manga_url)
+    url_download = re.sub(r"(https://)(.*?)(/manga/)", r"\1\2/download/", url_manga)
     try:
         download(url_download, directory=save_path)
 
         # Сохранение информации о манге в базу данных
         logging.info(f'Сохранение информации о манге в базу данных')
-        save_manga_info_basic(manga_id, manga_title, author_id, manga_url)
-        save_author_info(author_id, author_name, author_url)
+        save_manga_info(author_name, author_id, manga_title, url_manga, tag_names)
         logging.info(f'Информация о манге успешно сохранена в базу данных')
     except Exception as e:
         logging.error(f"Ошибка при скачивании манги: {e}")
         try:
             with open('error.txt', 'a', encoding='utf-8') as file:
-                file.write(manga_url + '\n')
+                file.write(url_manga + '\n')
         except Exception as e:
             logging.error(f"Ошибка при записи ошибки в файл: {e}")
         return
@@ -248,7 +247,7 @@ def manga(manga_url: str) -> None:
 
     try:
         with open('done.txt', 'a', encoding='utf-8') as file:
-            file.write(manga_url + '\n')
+            file.write(url_manga + '\n')
     except Exception as e:
         logging.error(f"Ошибка при записи в файл: {e}")
     logging.info(f'Запись в файл "done.txt" завершена')
