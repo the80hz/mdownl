@@ -1,14 +1,10 @@
-# main.py
-
 import requests
-
 import re
 import os
 import logging
 import sys
-
+import json  # Добавлен импорт json
 from concurrent.futures import ThreadPoolExecutor, as_completed
-
 from DB import init_db, save_manga_info, save_file_info, is_manga_downloaded, is_file_downloaded
 from utils import make_request, clean_filename, extract_domain, rm_prefix, HEADERS, setup_logging, get_manga_id
 
@@ -48,13 +44,11 @@ def readfile_parallel(path: str) -> None:
             futures = [executor.submit(process_line, line) for line in lines]
 
             # Ожидание завершения всех задач
-            '''for future in as_completed(futures):
+            for future in as_completed(futures):
                 try:
-                    # Получение результата выполнения задачи, если необходимо
-                    result = future.result()
-                    pass
+                    future.result()
                 except Exception as e:
-                    logging.error(f"Ошибка при выполнении задачи: {e}")'''
+                    logging.error(f"Ошибка при выполнении задачи: {e}")
     except Exception as e:
         logging.error(f"Ошибка при чтении файла: {e}")
 
@@ -181,15 +175,12 @@ def manga(url_manga: str) -> None:
     tag_elements = soup.select('li.sidetag > a:last-child')
     tag_names = [tag.get_text() for tag in tag_elements] if tag_elements else []
 
-    manga_info = (f'Название: {manga_title}\nАвтор: {author_name}\n'
-                  f'ID автора: {author_id}\nТэги: {tag_names}\nСсылка: {url_manga}')
-
     # Создание пути для сохранения файла
-    manga_title = clean_filename(manga_title)
-    author_name = clean_filename(author_name)
-    save_path = os.path.join(author_name, manga_title)
+    manga_title_clean = clean_filename(manga_title)
+    author_name_clean = clean_filename(author_name)
+    save_path = os.path.join(author_name_clean, manga_title_clean)
 
-    # Создание пути для сохранения файла
+    # Создание директории для манги
     try:
         os.makedirs(save_path, exist_ok=True)
     except OSError as e:
@@ -208,26 +199,31 @@ def manga(url_manga: str) -> None:
         cover_img_url = cover_img_tag['src']
         # Скачивание и сохранение изображения
         try:
-            response = requests.get(cover_img_url)
-            if response.status_code == 200:
-                with open(os.path.join(save_path, 'cover.jpg'), 'wb') as file:
-                    file.write(response.content)
-                logging.info(f'Обложка успешно скачана')
-            else:
-                logging.warning(f"Обложка не найдена")
+            response = requests.get(cover_img_url, headers=HEADERS)
+            response.raise_for_status()
+            with open(os.path.join(save_path, 'cover.jpg'), 'wb') as file:
+                file.write(response.content)
+            logging.info(f'Обложка успешно скачана')
         except Exception as e:
             logging.warning(f"Ошибка при скачивании обложки для манги: {e}")
     else:
         logging.warning(f"Обложка не найдена")
 
-    # Сохранение информации в текстовый файл
-    logging.info(f'Сохранение информации о манге')
+    # Сохранение информации в JSON файл
+    logging.info(f'Сохранение информации о манге в details.json')
+    details = {
+        "title": manga_title,
+        "author": author_name,
+        "genre": tag_names,
+        "status": "2"  # Устанавливаем статус как "2" (Completed)
+    }
+
     try:
-        with open(os.path.join(save_path, 'info.txt'), 'w', encoding='utf-8') as file:
-            file.write(manga_info)
-        logging.info(f'Информация о манге успешно сохранена')
+        with open(os.path.join(save_path, 'details.json'), 'w', encoding='utf-8') as json_file:
+            json.dump(details, json_file, ensure_ascii=False, indent=4)
+        logging.info(f'Файл details.json успешно создан')
     except Exception as e:
-        logging.error(f"Ошибка при сохранении информации о манге: {e}")
+        logging.error(f"Ошибка при сохранении details.json: {e}")
 
     # Смена URL для скачивания
     logging.info(f'Скачивание манги')
@@ -278,7 +274,7 @@ def download(url_download: str, directory: str) -> None:
 
     # Скачивание файлов
     if not download_links:
-        logging.warning("Файлы не найдены")
+        logging.warning(f"Файлы не найдены")
         try:
             open(os.path.join(directory, 'empty.txt'), 'w').close()
         except Exception as e:
@@ -288,7 +284,7 @@ def download(url_download: str, directory: str) -> None:
     logging.info(f'Найдено {len(download_links)} файлов')
     for link in download_links:
         download_url = link['href']
-        filename = link.get_text()
+        filename = link.get_text(strip=True)
 
         # Извлечение manga_id из URL
         manga_id = get_manga_id(download_url)
@@ -301,11 +297,16 @@ def download(url_download: str, directory: str) -> None:
         logging.info(f'Скачивание файла: {filename}')
         try:
             response = requests.get(download_url, headers=HEADERS)
+            response.raise_for_status()
         except Exception as e:
             logging.error(f"Ошибка при скачивании файла: {e}")
             raise Exception(f"Ошибка при скачивании файла: {e}")
 
         if response.status_code == 200:
+            # Проверка и добавление расширения .zip, если отсутствует
+            if not filename.lower().endswith('.zip'):
+                filename += '.zip'
+
             file_path = os.path.join(directory, f'{manga_id}_{filename}')
             try:
                 with open(file_path, 'wb') as file:
@@ -341,7 +342,6 @@ def main():
         author(url)
     elif '/manga/' in url:
         manga(url)
-
     else:
         readfile_parallel(url)
 

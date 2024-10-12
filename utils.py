@@ -1,11 +1,8 @@
-# utils.py
-
 import logging
 import re
 import glob
 import os
 import threading
-
 import requests
 from bs4 import BeautifulSoup
 
@@ -28,7 +25,7 @@ def make_request(url: str) -> BeautifulSoup or None:
     try:
         with requests.Session() as session:
             session.headers.update(HEADERS)
-            response = session.get(url, timeout=30)  # Добавление таймаута
+            response = session.get(url, timeout=60)  # Добавлен таймаут
             response.raise_for_status()
             return BeautifulSoup(response.text, 'html.parser')
     except requests.RequestException as e:
@@ -137,4 +134,3 @@ def get_manga_id(url: str) -> int or None:
         logging.error(f"Не удалось извлечь manga_id из URL: {url}")
         return None
     return int(manga_id.group(1))
-
